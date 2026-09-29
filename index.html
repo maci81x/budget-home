@@ -1147,29 +1147,22 @@ async function boot(){
     if(typeof window.supabase==='undefined')throw new Error('libreria non caricata');
     sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
     online=true;
-    const {data:{session}}=await sb.auth.getSession();
-    if(session) await dopoLogin(); else { ME=null; setSync('live') }
+    await sb.auth.getSession();
+    await dopoLogin();
   }catch(e){ online=false; bootErr=e.message||String(e); setSync('locale') }
 }
 async function dopoLogin(){
   const {data:mio}=await sb.rpc('bh_persona');
-  if(!mio){ ME=null; setSync('live'); return }
-  ME={id:mio,nome:NOMI[mio]||mio};
-  await seedSeNecessario(); await pullAll(); subscribe();
+  ME = mio ? {id:mio,nome:NOMI[mio]||mio} : null;
+  if(ME) await seedSeNecessario();
+  await pullAll(); subscribe(); setSync('live');
 }
 async function pinGiaScelto(id){ const {data}=await sb.rpc('pin_gia_scelto',{p:id}); return !!data }
 async function scollega(){
   if(sb)await sb.auth.signOut();
   ME=null; state.auth=null; state.profile='famiglia'; state.sub=null; state.tab='home';
-  ripristinaBase(); render(); toast('Sei uscito');
-}
-function vistaAttiva(){
-  return `<div class="hero" style="margin-top:16px"><div class="eyebrow">Budget Home</div>
-   <div class="hero-v" style="font-size:28px">Chi sei?</div>
-   <div class="hero-s">Entra col tuo PIN. La prima volta lo scegli tu. Poi l'app si apre sempre sulla Famiglia e non te lo richiede.</div></div>
-  <div class="grid2"><button class="btn" data-attiva="roby">Roby</button><button class="btn ghost" data-attiva="franci">Franci</button></div>
-  <div class="card soft"><div class="note">Il PIN lo verifica il database. Senza PIN da qui non si legge niente: né la Famiglia né il profilo dell'altro.</div>
-   <button class="btn ghost sm" style="margin-top:8px" id="au-off">Usa solo su questo dispositivo</button></div>`;
+  if(online){ await pullAll(); } else { ripristinaBase(); }
+  render(); toast('Sei in Famiglia');
 }
 
 const BASE={conti:JSON.parse(JSON.stringify(CONTI)),fisse:FISSE.slice(),variabili:VARIABILI.slice(),entrate:ENTRATE.slice(),versamenti:VERSAMENTI.slice(),obiettivi:OBIETTIVI.slice(),debiti:DEBITI.slice(),carte:CARTE.slice(),patrimonio:PATRIMONIO.slice(),registro:LEDGER.slice()};
@@ -1275,7 +1268,7 @@ async function openPin(who,attivazione){
     rimetti();
     if(e2){err(/Invalid login/i.test(e2.message)?'PIN non corretto':e2.message);return}
     await dopoLogin();
-    state.auth=who;state.profile='famiglia';state.sub=null;state.tab='home';
+    state.auth=who;state.profile=who;state.sub=null;state.tab='home';
     bg.remove();render();toast('Ciao '+NOMI[who]);
   };
   bg.querySelector('#dologin').addEventListener('click',go);
@@ -1693,14 +1686,9 @@ const TITLES={home:'Cruscotto',spese:'Spese',cal:'Calendario',debiti:'Debiti',al
 const SUBS=['entrate','progetti','patrimonio','carte','contanti','tasse','aps','report','archivio','utenti','impostazioni','famiglia','piano','immobile'];
 const TABS=['home','spese','cal','debiti','altro'];
 function render(){
-  if(online&&!ME){
-    $('#main').innerHTML=vistaAttiva();
-    $('#hdr-title').textContent='Budget Home';$('#hdr-sub').textContent='attivazione';
-    $('#hdr-eyebrow').textContent='29 set 2026';$('#profile').hidden=true;$('#hdrLogout').hidden=true;$('#fab').hidden=true;
-    document.querySelector('nav.tabs').hidden=true;badge();window.scrollTo({top:0});return}
   if(state.profile!=='famiglia'&&state.auth!==state.profile)state.profile='famiglia';
   $('#profile').hidden=false;$('#hdrLogout').hidden=!(state.auth||(online&&ME));document.querySelector('nav.tabs').hidden=false;
-  document.querySelectorAll('#profile button').forEach(b=>{b.hidden=!!(online&&ME)&&!(b.dataset.p==='famiglia'||b.dataset.p===ME.id);b.classList.toggle('on',b.dataset.p===state.profile)});
+  document.querySelectorAll('#profile button').forEach(b=>{b.hidden=false;b.classList.toggle('on',b.dataset.p===state.profile)});
   badge();
   const p=state.sub||state.tab;
   $('#main').innerHTML=PAGES[p]();
