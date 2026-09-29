@@ -990,7 +990,10 @@ function impostazioni(){return `<button class="back" data-go="altro">‹ Altro</
   <div class="card"><h2>Soglie di allerta <button class="btn sm ghost" data-info="soglie" style="padding:2px 9px;border-radius:99px">i</button></h2>
   <div id="info-soglie" hidden class="note" style="margin-bottom:8px">Sono i livelli oltre i quali l'app mette una voce in giallo o in rosso, senza bloccare niente. <b>Budget per categoria</b>: quando le spese reali del mese superano il budget di questa percentuale. <b>Fido usato</b>: sopra questa cifra il conto va segnalato (0 = appena si usa il fido). <b>Fondo emergenza</b>: quanti mesi di spese fisse dovrebbe coprire. <b>Contanti non classificati</b>: quota di spese in contanti senza categoria oltre la quale chiediamo di classificarle. <b>Crescita costi fissi</b>: se le fisse crescono più di così da un trimestre all'altro, si controllano le voci.</div>
   ${[['Budget per categoria','allerta se superato del','110','%'],['Fido usato','allerta sopra','0','€'],['Fondo emergenza','obiettivo copertura','3','mesi'],['Contanti non classificati','allerta sopra il','30','%'],['Crescita costi fissi','trimestre su trimestre','5','%']].map(s=>`<div class="row"><div><div class="t">${s[0]}</div><div class="m">${s[1]}</div></div><div class="a"><input class="inp n" style="width:70px" type="number" value="${s[2]}"> ${s[3]}</div></div>`).join('')}</div>
-  <div class="card"><h2>Accesso</h2><div class="note" style="margin-bottom:6px">La Famiglia è la prima schermata e si apre senza PIN. Roby e Franci entrano nel proprio profilo con il PIN.</div>${state.profile==='roby'?`<div class="row"><div><div class="t">Il mio PIN</div><div class="m">solo tu lo vedi e lo cambi</div></div><div class="a"><input class="inp n" type="text" data-pin="roby" value="${PIN.roby}"></div></div>`:state.profile==='franci'?`<div class="row"><div><div class="t">Il mio PIN</div><div class="m">solo tu lo vedi e lo cambi</div></div><div class="a"><input class="inp n" type="text" data-pin="franci" value="${PIN.franci}"></div></div>`:'<div class="hint">Ogni profilo cambia il proprio PIN dal suo account.</div>'}<button class="btn ghost" id="logout" style="margin-top:8px">Torna a Famiglia</button>${online?'<button class="btn ghost" id="scollega" style="margin-top:8px">Scollega questo dispositivo</button>':''}</div>
+  <div class="card"><h2>Accesso</h2><div class="note" style="margin-bottom:6px">Si entra col proprio PIN: da lì si vedono la Famiglia e il proprio profilo. Il PIN lo verifica il database, non è una schermata bloccata.</div>${online&&ME?`<div class="row"><div><div class="t">Cambia il mio PIN</div><div class="m">solo tu puoi cambiarlo</div></div></div>
+   <div class="grid2"><input class="inp" id="pin-vecchio" type="password" inputmode="numeric" maxlength="8" placeholder="PIN attuale"><input class="inp" id="pin-nuovo" type="password" inputmode="numeric" maxlength="8" placeholder="Nuovo PIN"></div>
+   <div id="pin-esito" class="hint" style="min-height:14px;margin-top:4px"></div>
+   <button class="btn" id="cambiapin" style="margin-top:6px">Salva il nuovo PIN</button>`:state.profile==='roby'?`<div class="row"><div><div class="t">Il mio PIN</div><div class="m">solo tu lo vedi e lo cambi</div></div><div class="a"><input class="inp n" type="text" data-pin="roby" value="${PIN.roby}"></div></div>`:state.profile==='franci'?`<div class="row"><div><div class="t">Il mio PIN</div><div class="m">solo tu lo vedi e lo cambi</div></div><div class="a"><input class="inp n" type="text" data-pin="franci" value="${PIN.franci}"></div></div>`:'<div class="hint">Ogni profilo cambia il proprio PIN dal suo accesso.</div>'}<button class="btn ghost" id="logout" style="margin-top:8px">${online&&ME?'Esci':'Torna a Famiglia'}</button></div>
   <div class="card"><h2>Liquidità minima per conto</h2><div class="note" style="margin-bottom:6px">Sotto questa soglia il cruscotto va in giallo.</div>${['mpsC','mpsF','mpsR'].filter(contoVis).map(k=>`<div class="row"><div class="t">${CONTI[k].n}</div><div class="a"><input class="inp n" type="number" data-liq="${k}" value="${SOGLIE.liqMin[k]}"></div></div>`).join('')}</div>
   <div class="card"><h2>Conti</h2>${Object.entries(CONTI).filter(([k])=>contoVis(k)).map(([k,c])=>`<div class="row"><div><div class="t">${c.n}</div><div class="m">${c.saldo!=null?'saldo '+eur(c.saldo)+' al '+c.upd:(c.note||'nessun estratto')}${c.fido?' · fido '+eur(c.fido):''}</div></div><span class="pill ${c.saldo!=null?'good':'warn'}">${c.saldo!=null?'letto':'saldo da inserire'}</span></div>`).join('')}</div>`}
 // ===== DEBITI: famiglia solo famiglia =====
@@ -1137,32 +1140,35 @@ async function seedSeNecessario(){
   return true;
 }
 // --- accesso: sessione anonima + PIN verificato dal database
-let PROFILI=[];
+const PEPE='bh-';
+const MAIL=id=>id+'@budget.home';
 async function boot(){
   try{
     if(typeof window.supabase==='undefined')throw new Error('libreria non caricata');
     sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
-    let {data:{session}}=await sb.auth.getSession();
-    if(!session){ const r=await sb.auth.signInAnonymously(); if(r.error)throw r.error; session=r.data.session }
-    online=true; await dopoLogin();
+    online=true;
+    const {data:{session}}=await sb.auth.getSession();
+    if(session) await dopoLogin(); else { ME=null; setSync('live') }
   }catch(e){ online=false; bootErr=e.message||String(e); setSync('locale') }
 }
-async function caricaProfili(){ const {data}=await sb.from('persone').select('id,nome,pin_impostato'); PROFILI=data||[] }
 async function dopoLogin(){
-  await caricaProfili();
   const {data:mio}=await sb.rpc('bh_persona');
   if(!mio){ ME=null; setSync('live'); return }
   ME={id:mio,nome:NOMI[mio]||mio};
   await seedSeNecessario(); await pullAll(); subscribe();
 }
-const pinImpostato=id=>{const p=PROFILI.find(x=>x.id===id);return p?!!p.pin_impostato:true};
-async function scollega(){ if(sb)await sb.rpc('scollega_profilo'); ME=null; state.auth=null; state.profile='famiglia'; ripristinaBase(); render(); toast('Dispositivo scollegato') }
+async function pinGiaScelto(id){ const {data}=await sb.rpc('pin_gia_scelto',{p:id}); return !!data }
+async function scollega(){
+  if(sb)await sb.auth.signOut();
+  ME=null; state.auth=null; state.profile='famiglia'; state.sub=null; state.tab='home';
+  ripristinaBase(); render(); toast('Sei uscito');
+}
 function vistaAttiva(){
   return `<div class="hero" style="margin-top:16px"><div class="eyebrow">Budget Home</div>
-   <div class="hero-v" style="font-size:28px">Attiva l'app</div>
-   <div class="hero-s">Una volta sola su questo telefono: scegli chi sei e il tuo PIN. Poi si apre sempre sulla Famiglia.</div></div>
-  <div class="grid2"><button class="btn" data-attiva="roby">Sono Roby</button><button class="btn ghost" data-attiva="franci">Sono Franci</button></div>
-  <div class="card soft"><div class="note">Il PIN lo verifica il database: il profilo dell'altro resta illeggibile da qui, non è solo una schermata bloccata.</div>
+   <div class="hero-v" style="font-size:28px">Chi sei?</div>
+   <div class="hero-s">Entra col tuo PIN. La prima volta lo scegli tu. Poi l'app si apre sempre sulla Famiglia e non te lo richiede.</div></div>
+  <div class="grid2"><button class="btn" data-attiva="roby">Roby</button><button class="btn ghost" data-attiva="franci">Franci</button></div>
+  <div class="card soft"><div class="note">Il PIN lo verifica il database. Senza PIN da qui non si legge niente: né la Famiglia né il profilo dell'altro.</div>
    <button class="btn ghost sm" style="margin-top:8px" id="au-off">Usa solo su questo dispositivo</button></div>`;
 }
 
@@ -1243,11 +1249,11 @@ function stagFranci(){
 }
 function splitStrip(P,nome){return `<div class="split"><div><small>Alla famiglia</small><b>${eur(P.fam)}</b><span class="hint">${pct(P.inc?P.fam/P.inc:0)}</span></div><div><small>Per ${nome}</small><b>${eur(P.fix+P.vr+P.goals+(P.ric||0))}</b><span class="hint">fisse, variabili, obiettivi</span></div><div><small>Resta</small><b style="color:${P.free<0?'var(--bad)':'var(--good)'}">${eur(P.free)}</b><span class="hint">su ${eur(P.inc)}</span></div></div>`}
 // ---- PIN
-function openPin(who,attivazione){
-  const nuovo=online&&!pinImpostato(who);
+async function openPin(who,attivazione){
+  const nuovo = online ? !(await pinGiaScelto(who)) : false;
   const bg=document.createElement('div');bg.className='pinbox';
   bg.innerHTML=`<div class="card"><h2>${NOMI[who]} · ${nuovo?'scegli il tuo PIN':'PIN'}</h2>
-   <div class="note" style="margin-bottom:8px">${nuovo?'Almeno 4 cifre. Ti servirà per entrare nel tuo profilo.':'Il profilo personale si apre con il PIN. La Famiglia resta sempre visibile.'}</div>
+   <div class="note" style="margin-bottom:8px">${nuovo?'Almeno 4 cifre, solo numeri. Te lo chiederà solo la prima volta su ogni telefono.':'Il PIN che hai scelto. Se lo sbagli non si apre niente.'}</div>
    <input class="inp" id="pin" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off" style="text-align:center;font-size:22px;letter-spacing:.3em">
    <div id="pinerr" class="hint" style="color:var(--bad);min-height:16px;margin-top:4px"></div>
    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn ghost" id="x">Annulla</button><button class="btn" id="dologin">${nuovo?'Salva ed entra':'Entra'}</button></div></div>`;
@@ -1256,15 +1262,21 @@ function openPin(who,attivazione){
   const go=async()=>{
     const v=inp.value.trim();
     if(!online){ if(v===PIN[who]){state.auth=who;state.profile=who;state.sub=null;save();bg.remove();render();toast('Ciao '+NOMI[who])}else err('PIN non corretto'); return }
-    if(nuovo&&v.length<4){err('Almeno 4 cifre');return}
+    if(v.length<4){err('Almeno 4 cifre');return}
+    if(!/^[0-9]+$/.test(v)){err('Solo numeri');return}
     const btn=bg.querySelector('#dologin');btn.textContent='…';
-    const {data,error}=await sb.rpc(nuovo?'imposta_pin':'entra_con_pin',{p:who,codice:v});
-    btn.textContent=nuovo?'Salva ed entra':'Entra';
-    if(error){err('Errore di collegamento');return}
-    if(data!=='ok'){err(data==='pin-errato'?'PIN non corretto':data==='pin-corto'?'Almeno 4 cifre':data==='gia-impostato'?'Questo profilo ha già un PIN':'Non riesco: '+data);return}
+    const rimetti=()=>btn.textContent=nuovo?'Salva ed entra':'Entra';
+    if(nuovo){
+      const {data,error}=await sb.rpc('imposta_pin',{p:who,codice:v,pepe:PEPE});
+      if(error){rimetti();err('Errore di collegamento');return}
+      if(data!=='ok'){rimetti();err(data==='pin-corto'?'Almeno 4 cifre':data==='pin-cifre'?'Solo numeri':data==='gia-impostato'?'Questo profilo ha già un PIN':'Non riesco: '+data);return}
+    }
+    const {error:e2}=await sb.auth.signInWithPassword({email:MAIL(who),password:PEPE+v});
+    rimetti();
+    if(e2){err(/Invalid login/i.test(e2.message)?'PIN non corretto':e2.message);return}
     await dopoLogin();
-    state.auth=attivazione?null:who;state.profile=attivazione?'famiglia':who;state.sub=null;state.tab='home';
-    bg.remove();render();toast(attivazione?'Attivata · ciao '+NOMI[who]:'Ciao '+NOMI[who]);
+    state.auth=who;state.profile='famiglia';state.sub=null;state.tab='home';
+    bg.remove();render();toast('Ciao '+NOMI[who]);
   };
   bg.querySelector('#dologin').addEventListener('click',go);
   inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();go()}});
@@ -1699,11 +1711,22 @@ function render(){
   window.scrollTo({top:0});
 }
 document.addEventListener('click',e=>{
-  const sb=e.target.closest('#cashf .seg button');if(sb){sb.parentNode.querySelectorAll('button').forEach(x=>x.classList.remove('on'));sb.classList.add('on');const t=document.querySelector('#ct .on').dataset.v;$('#cper').hidden=t!=='spesa';$('#cto').hidden=t!=='giro';return}
-  const t=e.target.closest('[data-liv],[data-pliv],[data-fadd],[data-vdel],#dologin,#logout,#hdrLogout,[data-share],[data-oadd],[data-odel],[data-ososp],[data-who],[data-t],[data-go],[data-sub],[data-p],[data-f],[data-day],[data-metodo],[data-regola],[data-pt],[data-del],[data-sheet],[data-toast],[data-ps],[data-cls],[data-cs],[data-ss],[data-pa],#fab,#fab2,[data-val],[data-imp],[data-avdel],[data-cat],[data-catm],[data-info],[data-cassaok],#themeBtn,[data-calnav],[data-mvm],[data-attiva],#au-off,#scollega,#sync,#diag');
+  const segB=e.target.closest('#cashf .seg button');if(segB){segB.parentNode.querySelectorAll('button').forEach(x=>x.classList.remove('on'));segB.classList.add('on');const t=document.querySelector('#ct .on').dataset.v;$('#cper').hidden=t!=='spesa';$('#cto').hidden=t!=='giro';return}
+  const t=e.target.closest('[data-liv],[data-pliv],[data-fadd],[data-vdel],#dologin,#logout,#hdrLogout,[data-share],[data-oadd],[data-odel],[data-ososp],[data-who],[data-t],[data-go],[data-sub],[data-p],[data-f],[data-day],[data-metodo],[data-regola],[data-pt],[data-del],[data-sheet],[data-toast],[data-ps],[data-cls],[data-cs],[data-ss],[data-pa],#fab,#fab2,[data-val],[data-imp],[data-avdel],[data-cat],[data-catm],[data-info],[data-cassaok],#themeBtn,[data-calnav],[data-mvm],[data-attiva],#au-off,#scollega,#sync,#diag,#cambiapin');
   if(!t)return;
   if(t.dataset.attiva){openPin(t.dataset.attiva,true);return}
   if(t.id==='scollega'){scollega();return}
+  if(t.id==='cambiapin'){
+    const vv=(document.querySelector('#pin-vecchio')||{}).value||'', nn=(document.querySelector('#pin-nuovo')||{}).value||'';
+    const box=document.querySelector('#pin-esito'); const dico=(m,ok)=>{if(box){box.textContent=m;box.style.color=ok?'var(--good)':'var(--bad)'}};
+    if(nn.length<4){dico('Il nuovo PIN deve avere almeno 4 cifre',false);return}
+    dico('…',true);
+    sb.rpc('cambia_pin',{vecchio:vv,nuovo:nn,pepe:PEPE}).then(({data,error})=>{
+      if(error){dico('Errore di collegamento',false);return}
+      if(data!=='ok'){dico(data==='pin-errato'?'Il PIN attuale non è giusto':data==='pin-corto'?'Almeno 4 cifre':data==='pin-cifre'?'Solo numeri':'Non riesco: '+data,false);return}
+      dico('PIN cambiato',true); toast('PIN aggiornato');
+    });
+    return}
   if(t.id==='au-off'){online=false;setSync('locale');ripristinaBase();render();toast('Solo su questo dispositivo');return}
   if(t.dataset.mvm){state.mvm=t.dataset.mvm;render();return}
   if(t.dataset.calnav){const c=state.cal||{y:NEXT.y,m:NEXT.m};let m=c.m+(+t.dataset.calnav),y=c.y;if(m<1){m=12;y--}if(m>12){m=1;y++}state.cal={y,m};state.day=null;render();return}
@@ -1723,10 +1746,10 @@ document.addEventListener('click',e=>{
   if(t.dataset.t){state.tab=t.dataset.t;state.sub=null;render()}
   else if(t.dataset.go){e.preventDefault();const g=t.dataset.go;if(TABS.includes(g)){state.tab=g;state.sub=null}else state.sub=g;render()}
   else if(t.dataset.sub){e.preventDefault();if(SUBS.includes(t.dataset.sub))state.tab='altro';state.sub=t.dataset.sub;render()}
-  else if(t.dataset.p){const w=t.dataset.p;if(w!=='famiglia'&&state.auth!==w&&(online?!!ME:!!PIN[w])){openPin(w);return}state.profile=w;state.sub=null;save();render()}
+  else if(t.dataset.p){const w=t.dataset.p;if(w!=='famiglia'&&state.auth!==w&&!(online&&ME&&ME.id===w)){openPin(w);return}state.profile=w;state.sub=null;save();render()}
   else if(t.dataset.who){document.querySelectorAll('#who button').forEach(b=>b.classList.toggle('on',b===t))}
   else if(t.id==='dologin'){}
-  else if(t.id==='logout'||t.id==='hdrLogout'){state.auth=null;state.profile='famiglia';state.sub=null;state.tab='home';save();render();toast('Sei in Famiglia')}
+  else if(t.id==='logout'||t.id==='hdrLogout'){if(online&&ME){scollega();return}state.auth=null;state.profile='famiglia';state.sub=null;state.tab='home';save();render();toast('Sei in Famiglia')}
   else if(t.id==='themeBtn'){toggleTheme()}
   else if(t.dataset.share){e.preventDefault();SHARE[t.dataset.share]=!SHARE[t.dataset.share];save();render()}
   else if(t.dataset.oadd){const o={id:'o'+Date.now(),owner:t.dataset.oadd,centro:t.dataset.oadd,n:'Nuovo obiettivo',ob:1000,acc:0,rata:50,freq:'mensile',fonte:t.dataset.oadd==='famiglia'?'MPS Comune':t.dataset.oadd==='roby'?'MPS Roby':'MPS Franci',dove:'Conto comune',rend:0,data:'2027-12'};OBIETTIVI.push(o);save();render();toast('Obiettivo aggiunto: rinominalo')}
