@@ -157,6 +157,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .hero{background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:20px 22px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
 .hero::after{content:"";position:absolute;right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--em) 18%,transparent),transparent 70%);pointer-events:none}
 .hero>*{position:relative;z-index:1}
+.av-row{display:flex;align-items:flex-start;padding:10px 0}
+.av-row:last-child{border-bottom:0!important}
+.fido-box{margin-top:12px;padding:10px 12px;border-radius:14px;background:var(--paper2);border:1px solid var(--line)}
+.fido-box.bad{border-color:var(--bad);background:var(--bad-soft)}
+.fido-box.warn{border-color:var(--warn);background:var(--warn-soft)}
+.ibtn{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--line);background:var(--paper);color:var(--ink2);font:600 11px/1 var(--body);cursor:pointer;vertical-align:middle;padding:0}
 .hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .hero-v{font:800 38px/1 var(--disp);letter-spacing:-.02em;margin:6px 0 4px;font-variant-numeric:tabular-nums;color:var(--acc)}.hero-v small{font-size:14px;color:var(--ink2);font-family:var(--body);font-weight:600;margin-left:4px;letter-spacing:0}
 :root[data-theme="dark"] .hero-v{color:var(--ink)}
@@ -268,7 +274,9 @@ const FISSE=[
  {id:'allb',v:'Assicurazione auto Franci',ente:'Allianz Bank',cat:'Assicurazioni',conto:'mpsC',chi:'Comune',centro:'famiglia',g:2,f:'mensile',imp:40.75,base:'ultimo',note:'39,75 + 1 di commissione, il 2 del mese sul comune'},
  {id:'salm',v:'Rata occhiali',ente:'Salmoiraghi & Viganò',cat:'Finanziamenti',conto:'mpsC',chi:'Comune',centro:'famiglia',g:21,f:'mensile',imp:34,base:'ultimo',note:'la seconda rata da 16 € è finita a luglio'},
  {id:'amexc',canale:true,v:'Estratto Amex Amazon Business',ente:'American Express',cat:'Carte',conto:'mpsC',chi:'Roby',centro:'roby',g:23,f:'mensile',imp:333.86,var:true,base:'media',note:'carta di Roby, oggi addebitata sul conto comune: da spostare su un conto di Roby · 12 addebiti = 4.006,29 € · da 108 a 607 € · ultimo 350,96 (23/9) · addebito = estratto + 1 € di commissione'},
- {id:'commc',v:'Commissioni conto',ente:'MPS',cat:'Banca',conto:'mpsC',chi:'Comune',centro:'famiglia',g:8,f:'trimestrale',mesi:[1,4,7,10],imp:35,base:'ultimo'},
+ {id:'cfin',v:'Finanziamento Consumer Finance',ente:'Consumer Finance MPS',cat:'Finanziamenti',conto:'mpsF',chi:'Franci',centro:'franci',g:10,f:'mensile',imp:326.65,base:'ultimo',note:'Prestito che Franci ha preso qualche anno fa (detto da Roby il 30/9/2026). 12 addebiti su 12 mesi, sempre 326,65 il 10. Esce dal conto MPS Franci, cioè dal conto su cui resta il 29 % per le tasse. Residuo e scadenza da contratto.'},
+{id:'irenf24',v:'F24 IREN (rifiuti/tributi)',ente:'IREN',cat:'Tasse',conto:'mpsC',chi:'Comune',centro:'famiglia',g:16,f:'semestrale',mesi:[6,12],imp:150,base:'dichiarato',note:'300 €/anno pagati in 2 rate da 150 € con F24 · detto da Franci il 30/9/2026 · MESI DA CONFERMARE: qui messi giugno e dicembre, correggeteli se le scadenze sono altre'},
+{id:'commc',v:'Commissioni conto',ente:'MPS',cat:'Banca',conto:'mpsC',chi:'Comune',centro:'famiglia',g:8,f:'trimestrale',mesi:[1,4,7,10],imp:35,base:'ultimo'},
  {id:'estra',v:'Estra (utenza su MPS Franci)',ente:'Estra Energie',cat:'Utenze',conto:'mpsF',chi:'Franci',centro:'immobile',g:8,f:'bimestrale',mesi:[2,4,6,8,10,12],imp:34.87,var:true,base:'media',note:'bimestrale, 6 bollette da 33 a 37 € · non è il gas di casa (Integra, sul comune): messa sull\'appartamento, dove c\'è già un\'altra Estra da ~200 su Unicredit · conferma cos\'è'},
  {id:'timf',v:'TIM mobile',ente:'TIM',cat:'Utenze',conto:'mpsF',chi:'Franci',centro:'franci',g:11,f:'mensile',imp:38.17,base:'ultimo',note:'43,17 fino ad agosto, 38,17 da settembre'},
  {id:'cartaf',canale:true,v:'Estratto carta MPS Franci',ente:'MPS',cat:'Carte',conto:'mpsF',chi:'Franci',centro:'franci',g:16,f:'mensile',imp:135.02,var:true,base:'media',note:'12 mesi = 1.620,26 € · da 0 a 517 € · ultimo 58,57 (16/9)'},
@@ -376,7 +384,8 @@ const DEBITI=[
  {n:'Rate occhiali',tipo:'Prestito',centro:'famiglia',rata:34,taeg:0,res:250,mesi:5,conto:'MPS Comune',note:'tasso zero: non toccare'},
  {n:'Rateizzazione Amex',tipo:'Rateizzazione',centro:'roby',rata:300.60,taeg:0,res:3000,mesi:10,conto:'MPS Roby',note:'300 € al mese per circa 3.000 € residui (dato di Roby, tasso e residuo esatto da contratto)'},
  {n:'Mutuo casa',tipo:'Mutuo',centro:'famiglia',rata:648.75,taeg:0,res:0,mesi:0,conto:'CR Volterra',edit:true,note:'54.100 € erogati il 15/5/2025 · 15 rate pagate · 4.000 € versati in più ad aprile · nuovo: fisso 3,45 %, rata 636 + 1,50 · residuo e durata da confermare per il piano'},
- {n:'Finanziamento Compass',tipo:'Prestito',centro:'roby',rata:127.5,taeg:0,res:0,conto:'CR Volterra',note:'dal 15/4/2026 · residuo e tasso da contratto'},
+ {n:'Finanziamento Consumer Finance MPS',tipo:'Prestito',centro:'franci',rata:326.65,taeg:0,res:0,conto:'MPS Franci',note:'preso da Franci qualche anno fa · 3.920 € pagati negli ultimi 12 mesi · esce dal conto delle tasse · residuo, tasso e ultima rata da contratto'},
+{n:'Finanziamento Compass',tipo:'Prestito',centro:'roby',rata:127.5,taeg:0,res:0,conto:'CR Volterra',note:'dal 15/4/2026 · residuo e tasso da contratto'},
  {n:'Finanziamento Cofidis (Fit Express)',tipo:'Prestito',centro:'roby',rata:37.43,taeg:0,res:0,conto:'CR Volterra',note:'contratto 25/2/2026, rata 7 · residuo da contratto'},
  {n:'Mutuo immobile',tipo:'Mutuo',centro:'immobile',rata:469.84,taeg:1.8,res:101159,mesi:318,conto:'Unicredit',note:'rata n. 53 a settembre 2026 · tasso e residuo stimati dagli interessi in rata (156,84 → 151,64): piano di ammortamento per confermare'},
 ];
@@ -445,16 +454,18 @@ const F24=[{d:'2025-10-16',v:1866.88},{d:'2025-11-17',v:1872.99},{d:'2025-12-16'
 const TAX={coeff:.78,inps:.2607,imposta:.15}; // forfettario, consulenza (ATECO 70.22), Gestione Separata piena
 const taxOn=x=>{const imp=x*TAX.coeff,inps=imp*TAX.inps,tax=(imp-inps)*TAX.imposta;return {imp,inps,tax,tot:inps+tax,rate:(inps+tax)/x}};
 // regola di contribuzione alla famiglia (documento master: 30 % → almeno 50 % degli incassi; configurabile)
-const REGOLA={minPct:60,pctDopo:40,giorno:16,rientro:350};
+const REGOLA={minPct:60,pctDopo:40,giorno:16,rientro:350,cuscinetto:150};
 const INCOME={roby:{netto:3040,note:'SSI al netto del 29 % che Franci accantona per le tasse (media 2026: 4.282 € lordi al mese). Aggiungi le entrate della tua P.IVA se ci sono.'},franci:{netto:1220.75,note:'media 12 mesi delle entrate tue sui conti MPS e Webank: Guild, Yoga Tribe, doposcuola, contanti versati (14.649 € in 12 mesi, da 0 a 3.330 al mese). La quota SSI trattenuta (29 %) non è reddito: è di INPS e Agenzia delle Entrate.'}};
 const VEICOLI={'Conto comune':0,'Conto personale':0,'Satispay salvadanaio':0,'Webank conto deposito':2,'Revolut Savings':2,'Fineco PAC ETF':7};
 const SHARE={roby:true,franci:true};
 const OBIETTIVI=[
  {id:'o1',owner:'famiglia',n:'Fondo emergenza',ob:3000,acc:0,rata:0,freq:'mensile',fonte:'MPS Comune',dove:'Webank conto deposito',rend:2,data:'2028-06',note:'Parte quando il fido comune è a zero: il rientro passa qui.'},
- {id:'o2',owner:'famiglia',n:'Vacanze estate 2027',ob:3000,acc:0,rata:250,freq:'mensile',fonte:'MPS Comune',dove:'Conto comune',rend:0,data:'2027-07'},
- {id:'o3',owner:'famiglia',n:'Vacanze inverno',ob:1200,acc:0,rata:100,freq:'mensile',fonte:'MPS Comune',dove:'Conto comune',rend:0,data:'2027-12'},
- {id:'o4',owner:'famiglia',n:'Campi estivi figlie',ob:960,acc:0,rata:80,freq:'mensile',fonte:'MPS Comune',dove:'Conto comune',rend:0,data:'2027-06'},
- {id:'o5',owner:'famiglia',n:'Pitturazione bagno',ob:400,acc:0,rata:50,freq:'mensile',fonte:'MPS Comune',dove:'Conto comune',rend:0,data:'2027-06'},
+ {id:'o2',owner:'famiglia',n:'Vacanze estate 2027',ob:3000,acc:0,rata:0,freq:'mensile',fonte:'MPS Comune',dove:'Conto comune',rend:0,data:'2027-07',sospeso:true,note:'In pausa finché il fido comune non è a zero. Riparte per prima.'},
+ {id:'o7',owner:'famiglia',n:'Imprevisti di casa',ob:1200,acc:0,rata:100,freq:'mensile',fonte:'Satispay',dove:'Satispay · portafoglio Famiglia',rend:0,data:'2027-09',note:'50 € a testa al mese. Obiettivo = un mese intero di spese fisse di casa (1.194 €). Serve perché il primo imprevisto non torni sul fido all\'11 %.'},
+{id:'o8',owner:'famiglia',n:'Natale e ferie',ob:900,acc:0,rata:80,freq:'mensile',fonte:'Satispay',dove:'Satispay · portafoglio Famiglia',rend:0,data:'2027-08',note:'40 € a testa al mese (Natale ~400 + ferie ~500). Per il Natale 2026 non fa in tempo: servono 150 € a testa a ottobre e novembre.'},
+{id:'o3',owner:'famiglia',n:'Vacanze inverno',ob:1200,acc:0,rata:0,freq:'mensile',fonte:'MPS Comune',dove:'Conto comune',rend:0,data:'2027-12',sospeso:true,note:'In pausa finché il fido comune non è a zero.'},
+ {id:'o4',owner:'famiglia',n:'Campi estivi figlie',ob:960,acc:0,rata:0,freq:'mensile',fonte:'MPS Comune',dove:'Conto comune',rend:0,data:'2027-06',sospeso:true,note:'In pausa: i campi sono a giugno, si riprende a gennaio con quello che avanza.'},
+ {id:'o5',owner:'famiglia',n:'Pitturazione bagno',ob:400,acc:0,rata:0,freq:'mensile',fonte:'MPS Comune',dove:'Conto comune',rend:0,data:'2027-06',sospeso:true,note:'In pausa finché il fido comune non è a zero.'},
  {id:'o6',owner:'famiglia',n:'Ristrutturazione casa / bagno',ob:8000,acc:0,rata:0,freq:'mensile',fonte:'MPS Comune',dove:'Webank conto deposito',rend:2,data:'2029-06',sospeso:true,note:'Sospeso finché il fido comune non è a zero.'},
  {id:'o7',owner:'roby',n:'Salvadanaio Satispay',ob:500,acc:0,rata:136.8,freq:'mensile',fonte:'CR Volterra',dove:'Satispay salvadanaio',rend:0,data:'2027-12',note:'circa 4,50 € al giorno nei portafogli interni (623 € oggi) · più 36 € in un ETF S&P 500 che rende il 3,3 %'},
  {id:'o8',owner:'roby',n:'PAC Fineco (S&P 500, MSCI World, Overnight)',ob:5000,acc:0,rata:517,freq:'mensile',fonte:'Fineco',dove:'Fineco PAC ETF',rend:7,data:'2030-12',note:'dagli estratti Fineco: ogni 12 del mese ~120 + 248 + 149 = ~517 €'},
@@ -707,7 +718,9 @@ function famCalc(){
   const gl=OBIETTIVI.filter(o=>o.owner==='famiglia'&&!o.sospeso); const goals=gl.reduce((a,o)=>a+mensile(o),0);
   const dir=ENTRATE.filter(e=>e.centro==='famiglia').reduce((a,e)=>a+e.imp,0);
   const fc=fidoComune(), mesiF=REGOLA.mesiFido||12, rientro=fc>0?fc/mesiF:0;
-  const L=[fix+vr,fix+vr+goals,fix+vr+goals+rientro], liv=REGOLA.livello||3, need=L[liv-1];
+  const cus=+REGOLA.cuscinetto||0;
+  const L=[fix+vr+cus,fix+vr+cus+goals,fix+vr+cus+goals+rientro], liv=REGOLA.livello||3, need=L[liv-1];
+  const fidoTot=(CONTI.mpsC&&CONTI.mpsC.fido)||0, fidoUso=fidoTot?Math.min(1,fc/fidoTot):0;
   const byChi=c=>fis.filter(f=>f.chi===c).reduce((a,f)=>a+meq(f),0)+vars.filter(v=>(v.chi||'Comune')===c).reduce((a,v)=>a+v.budget,0);
   const dR=byChi('Roby'), dF=byChi('Franci'), dC=byChi('Comune');
   const vers=w=>VERSAMENTI.filter(v=>v.da===w&&v.a==='Comune').reduce((a,v)=>a+v.imp,0);
@@ -718,9 +731,11 @@ function famCalc(){
   const cats=Object.entries(cat).map(([n,v])=>({n,v,p:need?v/need:0})).sort((a,b)=>b.v-a.v);
   if(liv>=2&&goals)cats.push({n:'Progetti',v:goals,p:goals/need,extra:true});
   if(liv>=3&&rientro)cats.push({n:'Rientro fido comune',v:rientro,p:rientro/need,extra:true});
-  const stato=gap<=0?'good':gap<=need*.1?'warn':'bad';
+  let stato=gap<=0?'good':gap<=need*.1?'warn':'bad';
+  // col fido quasi pieno non si può stare in verde se il gradino scelto non lo ripaga
+  if(stato==='good'&&fidoUso>=.9&&liv<3)stato='warn';
   const mese=OGGI.slice(0,7), una=LEDGER.filter(x=>x.user&&x.fam&&x.d.startsWith(mese));
-  return {fis,vars,fix,vr,gl,goals,dir,fc,mesiF,rientro,L,liv,need,budget:need,dR,dF,dC,vR,vF,diretto,versato,covered,now:covered,gap,cats,stato,una,
+  return {fis,vars,fix,vr,gl,goals,dir,fc,mesiF,rientro,cus,fidoTot,fidoUso,L,liv,need,budget:need,dR,dF,dC,vR,vF,diretto,versato,covered,now:covered,gap,cats,stato,una,
     realR:dR+vR,realF:dF+vF,cR:dR+vR,cF:dF+vF,comR:vR,comF:vF,addR:0,addF:0,pR:0,pF:0,p:0,pEq:0,TL:L.map(()=>({p:0}))};
 }
 function persFidi(me){const acc=me==='roby'?['mpsR','crv']:['mpsF'];return acc.filter(k=>CONTI[k]).map(k=>({k,n:CONTI[k].n,v:Math.max(0,-(CONTI[k].saldo||0)),noto:CONTI[k].saldo!=null,tasso:COSTO_FIDO[k]||.11})).filter(x=>x.v>0||!x.noto)}
@@ -795,7 +810,7 @@ function cfo(who){
     const P=persCalc('franci'); const I=immCalc();
     if(!P.inc||P.inc<1000)V.push({col:'bad',t:`Incasso inserito ${eur(P.inc)}: manca qualcosa`,d:'Il documento parlava di uno stipendio da 1.750, ma in 12 mesi di Webank e MPS Franci non c\'è. Se esiste, dimmi su quale conto arriva; se non esiste, il tuo mese va ridisegnato su quello che entra davvero.',az:'Conferma le entrate reali'});
     {const due=1824,s=CONTI.mpsF.saldo||0;V.push({col:s>=due?'good':'warn',t:`Fondo tasse = saldo MPS Franci: ${eur(s)} contro ${eur(due)} di F24 a ottobre e novembre`,d:`Funziona così: dopo ogni bonifico SSI il 29 % resta sul MPS (nel 2026: 4.362 trattenuti, 3.482 di F24 pagati). ${s<due?'Oggi il saldo non copre i prossimi due F24: il bonifico di ottobre (~1.407 di quota tasse) li copre solo se resta tutto lì.':'Il saldo copre i prossimi F24.'} A luglio 1.300 € sono arrivati dal conto dell'appartamento: da non ripetere.`,az:'Sul MPS Franci passano solo tasse e P.IVA; il personale sta su Webank'})}
-    V.push({col:'warn',t:'Consumer Finance MPS: 326,65 ancora addebitati il 10 settembre',d:'Roby dice che il finanziamento auto è estinto: l\'ultima rata risulta il 10/9 sul MPS Franci. Se a ottobre non esce più, va tutto bene; se esce, non era estinto.',az:'Controllare il 10 ottobre'});
+    V.push({col:'warn',t:'Il finanziamento di Franci esce dal conto delle tasse',d:'326,65 € il 10 di ogni mese, 3.920 € in 12 mesi, dal MPS Franci: lo stesso conto dove resta il 29 % di ogni bonifico SSI per pagare gli F24 (11.226 € in 12 mesi). Il prestito si mangia un terzo di quel conto. Non è un errore, ma va saputo: se il conto si svuota, a rischiare sono le tasse, non il prestito.',az:'Recuperare il contratto: residuo, tasso e quante rate mancano'});
     V.push({col:I.stato,t:`Appartamento: ${I.margin>=0?'+':''}${eur(I.margin)} al mese, gestione separata`,d:`Affitto e utenze rimborsate ${eur(I.inc)} − mutuo e spese ${eur(I.out)}. Vedi la pagina Appartamento per incassi, uscite e cosa fare.`,az:'Apri Appartamento'}); const inc=SSI.reduce((a,x)=>a+x.inc,0),tratt=SSI.reduce((a,x)=>a+x.inc-x.giro,0),dov=taxOn(inc).tot;
     V.push({col:tratt<dov*.9?'bad':'good',t:`Fondo tasse SSI: ${eur(tratt)} su ${eur(dov)}`,d:tratt<dov?`Mancano ${eur(dov-tratt)}. Il 29 % di ogni bonifico SSI va nel fondo prima di qualsiasi altra cosa: non è un tuo risparmio, è di INPS e Agenzia delle Entrate.`:'Il fondo copre il dovuto.',az:tratt<dov?`Recuperare ${eur((dov-tratt)/9)} al mese entro giugno 2027`:'Continua col 29 %'});
     V.push({col:P.free>=0?'good':'bad',t:`Il tuo mese chiude con ${eur(P.free)}`,d:`Incasso ${eur(P.inc)} (stipendio da confermare con Webank) − famiglia ${eur(P.fam)} − tue spese ${eur(P.fix+P.vr)} − obiettivi ${eur(P.goals)}.`,az:P.free>=0?'Margine disponibile per la famiglia':'Rivedi spese o obiettivi'});
@@ -877,6 +892,7 @@ function anomalie(scope){
   });
   return out.sort((a,b)=>b.d.localeCompare(a.d));
 }
+const COMUNE12={"entrate": [{"k": "Versamenti in contanti", "v": 4900.0, "n": 2}, {"k": "Giroconti da conti personali", "v": 3320.0, "n": 10}, {"k": "Assegno unico INPS", "v": 3051.0, "n": 13}, {"k": "Altri bonifici in arrivo", "v": 1250.0, "n": 2}, {"k": "Da Revolut", "v": 900.0, "n": 2}], "uscite": [{"k": "Domiciliazioni (utenze, polizze, rate)", "v": 5571.09, "n": 105}, {"k": "Saldo carte di credito", "v": 4096.82, "n": 13}, {"k": "Pagamenti POS e bancomat", "v": 2557.51, "n": 26}, {"k": "Bonifici e giroconti in uscita", "v": 2400.0, "n": 3}, {"k": "F24", "v": 580.0, "n": 1}, {"k": "Spese e interessi del conto", "v": 533.31, "n": 7}], "totE": 13421.0, "totU": 15738.73, "periodo": "20 ago 2025 → 20 ago 2026"};
 const SPIEGA={mutuo:'La rata n. 8 (gennaio 2026) non compare sull\'estratto. A giugno non è uscita e la n. 13 è stata pagata il 14 luglio con 1,54 € di mora, poi la n. 14 il 31 luglio: per questo luglio è doppio. Roby verifica con la banca se la rata 8 risulta pagata o arretrata.'};
 function mesePer(w,ym){ // cosa ha fatto ciascuno per la famiglia nel mese (fatti registrati, non quote)
   const L=LEDGER.filter(x=>x.d.startsWith(ym)&&(x.fam||x.per==='famiglia'));
@@ -1241,6 +1257,62 @@ function stagFranci(){
    <div class="hint">Uscite reali di famiglia (fisse + spesa, vestiti, salute dalle carte), 12 mesi. Media ${eur(STAG.fam.reduce((a,b)=>a+b,0)/12)}; picchi a marzo (AXA, gas), maggio e luglio (vacanze). Il fabbisogno del cruscotto è la media: nei mesi alti serve il cuscinetto, non il fido.</div>`,true);
 }
 function splitStrip(P,nome){return `<div class="split"><div><small>Alla famiglia</small><b>${eur(P.fam)}</b><span class="hint">${pct(P.inc?P.fam/P.inc:0)}</span></div><div><small>Per ${nome}</small><b>${eur(P.fix+P.vr+P.goals+(P.ric||0))}</b><span class="hint">fisse, variabili, obiettivi</span></div><div><small>Resta</small><b style="color:${P.free<0?'var(--bad)':'var(--good)'}">${eur(P.free)}</b><span class="hint">su ${eur(P.inc)}</span></div></div>`}
+
+// ---- Il conto comune in 12 mesi (dagli estratti, per canale)
+function contoComune12(){
+  const K=COMUNE12, saldo=K.totE-K.totU;
+  const riga=(x,tot,col)=>`<div class="row"><div style="flex:1"><div class="t">${x.k}</div>
+    <div class="cov-b" style="height:7px;margin-top:5px"><i style="width:${(x.v/tot*100).toFixed(1)}%;background:${col}"></i></div>
+    <div class="hint">${x.n} ${x.n===1?'movimento':'movimenti'} · ${Math.round(x.v/tot*100)} % · ${eur(x.v/12)}/mese</div></div>
+    <div class="a">${eur(x.v)}</div></div>`;
+  return `<div class="note" style="margin-bottom:8px">Il conto comune è il cuore della famiglia: qui arrivano i soldi e da qui escono. Questi numeri sono presi dall'estratto conto, ${K.periodo}, movimento per movimento.</div>
+  <div class="split">
+    <div><small>Entrato</small><b>${eur(K.totE)}</b><span class="hint">${eur(K.totE/12)}/mese</span></div>
+    <div><small>Uscito</small><b>${eur(K.totU)}</b><span class="hint">${eur(K.totU/12)}/mese</span></div>
+    <div><small>Differenza</small><b style="color:${saldo<0?'var(--bad)':'var(--good)'}">${saldo<0?'−':'+'}${eur(Math.abs(saldo))}</b><span class="hint">${saldo<0?'presi dal fido':'messi da parte'}</span></div>
+  </div>
+  <div class="note ${saldo<0?'warn':''}" style="margin:10px 0">${saldo<0
+    ? `In un anno il conto ha speso <b>${eur(Math.abs(saldo))} più di quanto ha incassato</b>: sono finiti sul fido, ed è per questo che oggi è a ${eur(fidoComune())}. Sono <b>${eur(Math.abs(saldo)/12)} al mese</b>: è la cifra che va colmata perché il fido smetta di crescere, prima ancora di iniziare a ripagarlo.`
+    : `In un anno il conto ha incassato più di quanto ha speso.`}</div>
+  <h3>Da dove sono arrivati</h3>${K.entrate.map(x=>riga(x,K.totE,'var(--em)')).join('')}
+  <h3>Dove sono andati</h3>${K.uscite.map(x=>riga(x,K.totU,'var(--mute)')).join('')}
+  <div class="note" style="margin-top:10px">Qui non c'è scritto chi ha messo cosa, e non è una dimenticanza: <b>l'estratto conto non lo dice</b>. Un versamento allo sportello e un giroconto non portano il nome di chi li ha fatti, e la carta di Franci non ha un estratto dettagliato come le altre. Attribuire quei ${eur(COMUNE12.entrate.filter(x=>/contanti|Giroconti/i.test(x.k)).reduce((a,x)=>a+x.v,0))} a uno dei due sarebbe inventare. <b>Da adesso lo registriamo mentre succede</b>: ogni spesa e ogni versamento segnati nell'app portano con sé chi ha pagato, e il conto per persona si costruisce da qui in avanti.</div>`;
+}
+
+// ---- Avvisi: cose che meritano attenzione adesso
+function avvisi(chi){
+  const A=[]; const oggi=new Date(OGGI+'T12:00:00');
+  const g=(d)=>Math.round((new Date(d+'T12:00:00')-oggi)/86400000);
+  if(chi==='famiglia'){
+    const F=famCalc();
+    if(F.fidoUso>=.9) A.push({l:'rosso',t:'Il fido comune è quasi finito',m:`Usato ${eur(F.fc)} di ${eur(F.fidoTot)} (${Math.round(F.fidoUso*100)} %). Se finisce, i pagamenti iniziano a tornare indietro.`,go:'debiti'});
+    else if(F.fidoUso>=.6) A.push({l:'giallo',t:'Fido comune oltre metà',m:`Usato ${Math.round(F.fidoUso*100)} %.`,go:'debiti'});
+    if(F.gap>0) A.push({l:F.gap>F.need*.1?'rosso':'giallo',t:`Mancano ${eur(F.gap)} al mese`,m:`Al gradino ${F.liv} il fabbisogno è ${eur(F.need)} e arrivano ${eur(F.covered)}.`,go:'home'});
+    const sp=saldoPrevisto('mpsC');
+    if(sp&&sp.prev!=null&&sp.prev<-(CONTI.mpsC.fido||0)*.95) A.push({l:'rosso',t:'Il conto comune rischia di sfondare il fido',m:`Previsto a fine mese ${eur(sp.prev)} contro un fido di ${eur(CONTI.mpsC.fido)}.`,go:'home'});
+    const scad=fisseVis().filter(f=>dueIn(f,NEXT.m)&&f.g<=10).sort((a,b)=>a.g-b.g);
+    const tot=scad.reduce((a,f)=>a+f.imp,0);
+    if(scad.length) A.push({l:'info',t:`${scad.length} addebiti nei primi 10 giorni`,m:`${eur(tot)} in uscita: ${scad.slice(0,3).map(f=>f.v).join(', ')}${scad.length>3?'…':''}`,go:'cal'});
+    const an=anomalie('famiglia');
+    if(an.length) A.push({l:'giallo',t:`${an.length} cose non standard negli estratti`,m:an.slice(0,2).map(a=>a.v+': '+a.msg).join(' · '),go:'home'});
+    OBIETTIVI.filter(o=>o.owner==='famiglia'&&!o.sospeso&&o.rata>0).forEach(o=>{
+      if((+o.acc||0)===0) A.push({l:'info',t:`"${o.n}" è fermo a zero`,m:`Servono ${eur(o.rata)} al mese per arrivare a ${eur(o.ob)}. Primo versamento da fare.`,go:'progetti'});
+    });
+  } else {
+    const P=persCalc(chi), fidi=persFidi(chi);
+    fidi.forEach(f=>{ if(f.noto&&f.v>0) A.push({l:f.v>6000?'rosso':'giallo',t:`${f.n}: fido usato per ${eur(f.v)}`,m:`Ti costa circa ${eur(f.v*f.tasso)} l'anno di soli interessi.`,go:'debiti'}) });
+    if(P.free<0) A.push({l:'rosso',t:`Il tuo mese chiude a ${eur(P.free)}`,m:'Entrate meno spese, obiettivi e quota famiglia.',go:'home'});
+  }
+  return A;
+}
+function avvisiCard(A){
+  if(!A.length) return '<div class="note">Niente da segnalare adesso.</div>';
+  const ico={rosso:'var(--bad)',giallo:'var(--warn)',info:'var(--acc)'};
+  return A.map(a=>`<button class="row av-row" data-go="${a.go}" style="width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);cursor:pointer">
+    <span class="sem" style="background:${ico[a.l]};flex:0 0 auto;margin-top:5px"></span>
+    <div style="flex:1;margin-left:10px"><div class="t">${a.t}</div><div class="m">${a.m}</div></div>
+    <span class="a" style="color:var(--mute)">›</span></button>`).join('');
+}
 // ---- PIN
 async function openPin(who,attivazione){
   const nuovo = online ? !(await pinGiaScelto(who)) : false;
@@ -1284,18 +1356,45 @@ function homeFam(){
   const scad=[...fisseVis().filter(f=>dueIn(f,NEXT.m)).map(f=>({...f,day:f.g,t:'out'})),...entrateVis().map(e=>({...e,day:e.g,t:'in'}))].filter(x=>x.day<=12).sort((a,b)=>a.day-b.day);
   return `
   <div class="hero">
-    <div class="hero-top"><div><div class="eyebrow">Fabbisogno mensile <span class="pill acc" style="margin-left:4px">gradino ${F.liv}</span></div><div class="hero-v">${eur(F.need)}<small>/ mese</small></div>
-      <div class="hero-s">${F.gap>0?`mancano <b>${eur(F.gap)}</b> al mese`:`margine <b>${eur(-F.gap)}</b> al mese`} <span class="stat ${F.stato}"><i class="sem ${F.stato}"></i>coperto al ${Math.round(cov*100)} %</span></div></div>
+    <div class="hero-top"><div><div class="eyebrow">Fabbisogno mensile <button class="ibtn" data-info="fab" aria-label="Cosa vuol dire">i</button> <span class="pill acc" style="margin-left:4px">gradino ${F.liv}</span></div><div class="hero-v">${eur(F.need)}<small>/ mese</small></div>
+      <div class="hero-s">${F.gap>0?`mancano <b>${eur(F.gap)}</b> al mese`:`margine <b>${eur(-F.gap)}</b> al mese`} <span class="stat ${F.stato}"><i class="sem ${F.stato}"></i>coperto al ${Math.round(cov*100)} %</span></div>
+      ${F.liv===1&&F.fc>0?`<div class="hint" style="margin-top:6px;color:var(--warn)">Attenzione: a questo gradino pareggi le spese, ma il fido resta a ${eur(F.fc)} e non scende.</div>`:''}</div>
       ${gauge(cov,F.stato)}</div>
     <div class="cov"><div class="cov-h"><span>Copertura del fabbisogno</span><b>${eur(F.covered)} / ${eur(F.need)}</b></div>
       <div class="cov-b"><i style="width:${Math.min(100,F.dir/F.need*100)}%;background:var(--acc)"></i><i style="width:${Math.min(100,F.diretto/F.need*100)}%;background:var(--em)"></i><i style="width:${Math.min(100,F.versato/F.need*100)}%;background:var(--teal)"></i></div>
       <div class="cov-l"><span><span><b class="dot" style="background:var(--acc)"></b>Entrate dirette</span><em>${eur(F.dir)}</em></span><span><span><b class="dot" style="background:var(--em)"></b>Dai profili</span><em>${eur(F.diretto)}</em></span><span><span><b class="dot" style="background:var(--teal)"></b>Sul comune</span><em>${eur(F.versato)}</em></span></div></div>
+    <div id="info-fab" hidden class="note" style="margin:8px 0">
+      <b>Il fabbisogno è quanto costa la famiglia ogni mese</b>, non quanto guadagnate.
+      È la somma di due cose reali: le <b>spese fisse</b> (${eur(F.fix)}: mutuo, utenze, assicurazioni, rate) e le <b>spese variabili</b> (${eur(F.vr)}: spesa, figlie, viaggi, salute, casa) — in tutto <b>${eur(F.L[0])}</b>.
+      Le fisse usano l'ultimo importo davvero addebitato; le bollette e la spesa usano la media dei 12 mesi, perché cambiano ogni volta.
+      Dentro ogni gradino c'è anche un <b>cuscinetto di ${eur(F.cus)} al mese</b> che resta sul conto e non si spende: serve perché i mesi non sono tutti uguali (giugno 2.077 €, luglio 3.536 €).
+      Poi si aggiunge quello che <b>volete mettere da parte</b>: ${eur(F.goals)} al mese per i progetti e ${eur(F.rientro)} al mese per riportare a zero il fido del conto comune (${eur(F.fc)} in ${F.mesiF} mesi).
+      <br><br><b>I tre gradini</b> sono tre livelli di ambizione, e scegliete voi a quale puntare:<br>
+      <b>1 · Pareggio ${eur(F.L[0])}</b> — si arriva a fine mese senza intaccare il fido, ma non si accantona niente.<br>
+      <b>2 · Progetti ${eur(F.L[1])}</b> — come sopra, più ${eur(F.goals)} al mese per ferie, Natale, campi estivi, imprevisti.<br>
+      <b>3 · Fido a 0 ${eur(F.L[2])}</b> — come sopra, più ${eur(F.rientro)} al mese per chiudere il fido del conto comune: è l'obiettivo di questa app.<br><br>
+      La <b>copertura</b> qui sopra è quanto ci arriva davvero oggi: ${eur(F.dir)} di entrate della famiglia + ${eur(F.diretto)} di spese pagate direttamente da voi + ${eur(F.versato)} versati sul comune.
+    </div>
+    ${(()=>{const u=Math.round(F.fidoUso*100), st=u>=90?'bad':u>=60?'warn':'good';
+      return `<div class="fido-box ${st}">
+        <div class="cov-h"><span>Fido del conto comune</span><b>${eur(F.fc)} di ${eur(F.fidoTot)} · ${u} % usato</b></div>
+        <div class="cov-b" style="height:10px"><i style="width:${u}%;background:var(--${st==='bad'?'bad':st==='warn'?'warn':'good'})"></i></div>
+        <div class="hint" style="margin-top:6px">${F.fc<=0?'Il fido non è usato: il conto è in positivo.':u>=90?`Il conto vive quasi tutto sul fido. Pareggiare il mese non lo fa scendere: serve versare <b>${eur(F.rientro)} in più al mese</b> (gradino 3) perché torni a zero in ${F.mesiF} mesi.`:`Per riportarlo a zero in ${F.mesiF} mesi servono <b>${eur(F.rientro)} al mese</b> oltre alle spese.`}</div>
+      </div>`})()}
     <div class="steps-h"><span class="eyebrow">Gradino</span><span class="g">obiettivo: fido a zero</span></div>
     <div class="steps3">${steps.map((s,i)=>`<button class="st ${F.liv===i+1?'on':''}" data-liv="${i+1}"><span>${i+1} · ${s[0]}</span><b>${eur(s[2])}</b><small>${s[1]}</small></button>`).join('')}</div>
   </div>
+  ${(()=>{const A=avvisi('famiglia');const urg=A.filter(x=>x.l==='rosso').length;return A.length?sec('avvisi','Da guardare adesso',(urg?urg+' urgenti · ':'')+A.length+' avvisi',avvisiCard(A),true):''})()}
   <div class="actions">${act('c1','data-fadd="spesa"','spesa','＋ Spesa')}${act('c2','data-fadd="entrata"','entrata','＋ Entrata')}${act('c3','data-val="famiglia"','valuta','Valuta')}${act('c4','data-imp="1"','importa','Importa')}</div>
   ${sec('inc','Dove va il fabbisogno','tocca una categoria per il dettaglio mese per mese',incidenza(F,5)+(F.cats.length>5?`<button class="btn ghost sm" style="margin-top:8px" data-sub="famiglia">Tutte le ${F.fis.length+F.vars.length} voci con la % ›</button>`:''),true)}
+  ${sec('chi','Il conto comune in un anno','entrato, uscito e quanto è finito sul fido',contoComune12())}
   <details class="sec cfo-sec" data-secx="cfo" ${OPEN.cfo==null||OPEN.cfo?'open':''}><summary><div><b>Direttore finanziario</b><span>consigli in ordine, con i numeri</span></div><span class="cfo-badge">● aggiornato</span></summary><div class="secb">${cfoCard(cfo('famiglia'))}</div></details>
+  ${F.fc>0?sec('impegno','Il versamento del mese','ogni mese il '+REGOLA.giorno+' · '+eur(F.rientro+F.cus),`
+    <div class="note" style="margin-bottom:8px">Questo <b>non è una spesa</b>: è un rimborso di debito, e resta soldi vostri. Per questo non sta fra le variabili — se ci stesse, sarebbe la prima cosa che tagliate quando il mese è storto. Trattatelo come la rata del mutuo: parte il ${REGOLA.giorno} e non si discute.</div>
+    <div class="row"><div><div class="t">Rientro del fido comune</div><div class="m">${eur(F.fc)} da coprire in ${F.mesiF} mesi</div></div><div class="a">${eur(F.rientro)}</div></div>
+    <div class="row"><div><div class="t">Cuscinetto che resta sul conto</div><div class="m">non si spende: serve per i mesi alti</div></div><div class="a">${eur(F.cus)}</div></div>
+    <div class="row"><div><div class="t"><b>Da versare sul conto comune</b></div><div class="m">oltre alle spese correnti</div></div><div class="a"><b>${eur(F.rientro+F.cus)}</b></div></div>
+    <div class="hint" style="margin-top:8px">Consiglio: impostate un <b>bonifico ricorrente</b> il ${REGOLA.giorno} di ogni mese verso il conto comune. Automatico batte volenteroso.</div>`):''}
   ${sec('rientro','Piano di rientro consigliato',F.fc>0?`fido comune ${eur(F.fc)} · a zero a ${R.rec.fine}`:'fido a zero',rientroCard(R))}
   ${sec('prog','Progetti',F.gl.length?F.gl.length+' attivi · '+eur(F.goals)+'/mese':'',F.gl.length?F.gl.map(o=>{const n=mesiA(o);return `<div class="pp"><div class="row" style="border:0;padding:0"><div><div class="t">${o.n}</div><div class="m">${eur(mensile(o))}/mese · ${o.dove}</div></div><div class="a">${isFinite(n)?(n?addM(n):'fatto'):'—'}</div></div><div class="prog"><i style="width:${Math.min(100,(+o.acc||0)/o.ob*100)}%"></i></div><div class="hint">${eur(+o.acc||0)} di ${eur(o.ob)}</div></div>`}).join('')+`<button class="btn ghost sm" style="margin-top:8px" data-sub="progetti">Modifica importi e date ›</button>`:'<div class="note">Nessun progetto attivo.</div>')}
   ${sec('scad','Prossime scadenze','1–12 ottobre · '+scad.length,scad.map(x=>`<div class="sc-row"><div class="dt"><small>ott</small><b>${String(x.day).padStart(2,'0')}</b></div><div><div class="t">${x.v}</div><div class="m">${CONTI[x.conto]?CONTI[x.conto].n:''} · ${x.chi}</div></div><div class="a ${x.t==='in'?'pos':''}">${x.t==='in'?'+':'−'}${eur(x.imp)}</div></div>`).join('')+`<button class="btn ghost sm" style="margin-top:8px" data-go="cal">Tutto il calendario ›</button>`)}
@@ -1309,6 +1408,7 @@ function incidenza(F,max){
   return `<div class="inc">${rows.map(c=>`<div class="inc-r" ${c.extra?'':`data-cat="${c.n}" style="cursor:pointer"`}><div class="inc-l"><div class="nm">${icat(c.n)}<div><span>${c.n}${c.extra?'':' ›'}</span><small>${pct(c.p)} del fabbisogno</small></div></div><b>${eur(c.v)}</b></div><div class="inc-b"><i style="width:${Math.max(3,c.p/top*100)}%;${c.extra?'background:var(--teal)':''}"></i></div></div>`).join('')}</div>`;
 }
 function homePers(){
+  const _AV=avvisi(state.profile);
   const me=state.profile, P=persCalc(me), k=me==='roby'?'mpsR':'mpsF', d=disp(k), tr=me==='roby'?TREND.Roby:TREND.Franci, nome=me==='roby'?'Roby':'Franci';
   const centri=me==='roby'?['roby']:['franci','piva','aps'];
   const next=[...FISSE.filter(f=>centri.includes(f.centro)&&dueIn(f,NEXT.m)).map(f=>({...f,day:f.g,t:'out'}))].filter(x=>x.day<=16).sort((a,b)=>a.day-b.day);
@@ -1327,6 +1427,7 @@ function homePers(){
     <div class="steps3">${steps.map((s,i)=>`<button class="st ${P.liv===i+1?'on':''}" data-pliv="${i+1}"><span>${i+1} · ${s[0]}</span><b>${eur(s[2])}</b><small>${s[1]}</small></button>`).join('')}</div>
     ${ign.length?ign.map(x=>`<div class="row" style="border:0;padding:6px 0 0"><div class="m">Saldo ${x.n} da inserire</div><div class="a"><input class="inp n" style="width:90px" type="number" data-sv="${x.k}" placeholder="es. -3500"> <button class="btn sm" data-ss="${x.k}">ok</button></div></div>`).join(''):''}
   </div>
+  ${_AV.length?sec('avvisip','Da guardare adesso',(_AV.filter(x=>x.l==='rosso').length?_AV.filter(x=>x.l==='rosso').length+' urgenti · ':'')+_AV.length+' avvisi',avvisiCard(_AV),true):''}
   <div class="actions">${act('c1','id="fab2"','mov','＋ Movimento')}${act('c3',`data-val="${me}"`,'valuta','Valuta')}${act('c4','data-imp="1"','importa','Importa')}${act('c2','data-sub="piano"','piano','Il mio piano')}</div>
   ${me==='roby'?todoRoby()+vendereRoby():''}
   ${me==='franci'?stagFranci():''}
@@ -1354,7 +1455,9 @@ function rientroCard(R){
    <li><b>Dopo</b>: la stessa cifra va al fondo emergenza (3.000 € in ${Math.ceil(3000/R.rec.q)} mesi), poi ai progetti.</li></ol>
    <div class="tw"><table><thead><tr><th>Mesi</th><th class="r">Al mese</th><th class="r">Interessi</th><th class="r">A zero</th></tr></thead><tbody>${R.opts.map(o=>`<tr class="${o.n===R.rec.n?'on':''}"><td>${o.n}${o.n===R.rec.n?' <span class="pill acc">consigliato</span>':''}</td><td class="r">${eur(o.q)}</td><td class="r">${eur(o.int)}</td><td class="r">${o.fine}</td></tr>`).join('')}</tbody></table></div>
    <label class="f">Il gradino 3 usa <b>${F.mesiF} mesi</b> (${eur(F.rientro)}/mese)</label><input type="range" id="mesifido" min="3" max="36" step="1" value="${F.mesiF}">
-   <div class="hint">Consigliato = il rientro più veloce che sta nel margine dopo i progetti; se il margine non c'è, 12 mesi come riferimento.</div>`;
+   <div class="hint">Consigliato = il rientro più veloce che sta nel margine dopo i progetti; se il margine non c'è, 12 mesi come riferimento.</div>
+   <label class="f" style="margin-top:10px">Cuscinetto che resta sul conto: <b>${eur(F.cus)} al mese</b></label><input type="range" id="cuscinetto" min="0" max="400" step="25" value="${F.cus}">
+   <div class="hint">Non è una spesa: è quanto lasciate sul conto comune per non vivere appesi al fido. È dentro tutti e tre i gradini. I mesi non sono uguali: giugno 2.077 €, luglio 3.536 € — con 0 di cuscinetto ogni mese alto torna sul fido.</div>`;
 }
 // ===== Valuta una spesa =====
 function openValuta(chi){
@@ -1770,6 +1873,7 @@ document.addEventListener('submit',e=>{
 
 document.addEventListener('input',e=>{
   if(e.target.id==='q'){state.q=e.target.value;const pos=e.target.selectionStart;render();const q=$('#q');q.focus();q.setSelectionRange(pos,pos)}
+  if(e.target.id==='cuscinetto'){REGOLA.cuscinetto=+e.target.value;save();const lb=e.target.previousElementSibling;if(lb&&lb.querySelector('b'))lb.querySelector('b').textContent=eur(+e.target.value)+' al mese';return}
   if(e.target.id==='mesifido'||e.target.id==='mesip'){const id=e.target.id;if(id==='mesifido')REGOLA.mesiFido=+e.target.value;else PIANO['mesi_'+state.profile]=+e.target.value;save();const lb=e.target.previousElementSibling;if(lb&&lb.querySelector('b'))lb.querySelector('b').textContent=e.target.value+(id==='mesifido'&&lb.textContent.includes('Fido')?' mesi':'');return}
   if(e.target.dataset.vers){const v=VERSAMENTI.find(x=>x.da===e.target.dataset.vers&&x.a==='Comune');v.imp=+e.target.value||0;save();return}
   if(e.target.id==='extra'){state.extra=+e.target.value;render()}
