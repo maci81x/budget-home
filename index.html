@@ -289,7 +289,7 @@ const FISSE=[
  {id:'f24',daSSI:true,v:'Imposte F24 (forfettario)',ente:'AdE / INPS',cat:'Tasse',conto:'mpsF',chi:'Franci',centro:'piva',g:16,f:'mensile',imp:935,var:true,base:'media',note:'11.226 € in 12 mesi; picchi a giugno e novembre'},
  {id:'mutimm',v:'Mutuo appartamento',ente:'Unicredit',cat:'Mutuo',conto:'uni',chi:'Franci',centro:'immobile',g:1,f:'mensile',imp:469.84,base:'ultimo',note:'rata n. 53 il 1/9/2026 · interessi 151,64'},
  {id:'immgas',v:'Gas appartamento',ente:'Estra Energie',cat:'Utenze',conto:'uni',chi:'Franci',centro:'immobile',g:5,f:'mensile',imp:49.70,var:true,base:'media',note:'3 bollette in 12 mesi = 596,38 € (182, 208, 206) · rimborsate dall\'inquilino'},
- {id:'immcond',v:'Bollettino postale CCP …8109',ente:'CCP 001013068109',cat:'Casa',conto:'uni',chi:'Franci',centro:'immobile',g:15,f:'mensile',imp:29.12,var:true,base:'media',note:'6 bollettini in 12 mesi = 349,44 € (da 39 a 81) · condominio? da confermare'},
+ {id:'immcond',v:'Condominio · quota proprietario',ente:'Condominio Via A. Grandi 46 · unità B12',cat:'Casa',conto:'uni',chi:'Franci',centro:'immobile',g:15,f:'mensile',imp:70,base:'dichiarato',note:'70 €/mese decisi da Roby l\'1/10/2026, con un margine sopra il dovuto. Dal prospetto del 16/9/2026: esercizio 2026 = saldo 51,25 + 4 rate da 150,83 → 654,58 €/anno di quota vostra = 54,55 al mese; i 70 lasciano 15,45 al mese di cuscinetto per conguagli e aumenti. Scadenze vere: 1/1, 3/7, 31/7, 30/9, 30/11. Le quote del conduttore (339,44 a rata) le deve l\'inquilino.'},
  {id:'immccp2',v:'Bollettino postale CCP …6584',ente:'CCP 000010416584',cat:'Casa',conto:'uni',chi:'Franci',centro:'immobile',g:20,f:'trimestrale',mesi:[1,4,7,10],imp:17.79,var:true,base:'media',note:'3 bollettini = 53,38 €'},
  {id:'immf24',v:'F24 appartamento (IMU e tributi)',ente:'AdE',cat:'Tasse',conto:'uni',chi:'Franci',centro:'immobile',g:16,f:'mensile',imp:66.71,var:true,base:'media',note:'5 deleghe in 12 mesi = 800,50 € (dic 79, mag 156, giu 418 + 74, lug 73)'},
  {id:'immalia',v:'Rifiuti Alia',ente:'Alia Servizi Ambientali',cat:'Casa',conto:'uni',chi:'Franci',centro:'immobile',g:10,f:'annuale',mesi:[9],imp:72.01,base:'ultimo',note:'addebitato il 10/9/2026'},
@@ -391,7 +391,8 @@ const DEBITI=[
  {n:'Finanziamento Consumer Finance MPS',tipo:'Prestito',centro:'franci',rata:326.65,taeg:0,res:0,conto:'MPS Franci',note:'preso da Franci qualche anno fa · 3.920 € pagati negli ultimi 12 mesi · esce dal conto delle tasse · residuo, tasso e ultima rata da contratto'},
 {n:'Finanziamento Compass',tipo:'Prestito',centro:'roby',rata:127.5,taeg:0,res:0,conto:'CR Volterra',note:'dal 15/4/2026 · residuo e tasso da contratto'},
  {n:'Finanziamento Cofidis (Fit Express)',tipo:'Prestito',centro:'roby',rata:37.43,taeg:0,res:0,conto:'CR Volterra',note:'contratto 25/2/2026, rata 7 · residuo da contratto'},
- {n:'Mutuo immobile',tipo:'Mutuo',centro:'immobile',rata:469.84,taeg:1.8,res:101159,mesi:318,conto:'Unicredit',note:'rata n. 53 a settembre 2026 · tasso e residuo stimati dagli interessi in rata (156,84 → 151,64): piano di ammortamento per confermare'},
+ {n:'Condominio scaduto · unità B12',tipo:'Arretrato',centro:'immobile',rata:0,taeg:0,res:1408.46,conto:'Unicredit',note:'Sollecito dello Studio Condomino del 16/9/2026: 918,19 € scaduti, più la rata 3 del 30/9 (490,27) = 1.408,46 al 1/10. Di questi 503,74 sono quota vostra e 904,72 sono quote del conduttore che l\'inquilino non ha versato. Il proprietario risponde in solido: paga il condominio e poi rivale sull\'inquilino. IBAN IT93 P010 3071 8810 0000 0596 813'},
+{n:'Mutuo immobile',tipo:'Mutuo',centro:'immobile',rata:469.84,taeg:1.8,res:101159,mesi:318,conto:'Unicredit',note:'rata n. 53 a settembre 2026 · tasso e residuo stimati dagli interessi in rata (156,84 → 151,64): piano di ammortamento per confermare'},
 ];
 const PATRIMONIO=[
  {n:'Fineco · liquidità',chi:'roby',tipo:'Conto',metodo:'app',val:465.15,upd:'29/09/26',note:'dalla schermata Fineco'},
@@ -1206,6 +1207,21 @@ function ssiPromemoria(who){
 }
 // ---- Roby: cosa fare adesso
 const TODO=LS('bh-todo')||{};
+function todoFranci(){
+  const P=persCalc('franci');
+  const fondo=(CONTI.mpsF&&CONTI.mpsF.saldo)||0;
+  const dovuto=taxOn(SSI.reduce((a,x)=>a+x.inc,0)).tot;
+  const items=[
+   ['f1','Recupera il contratto del finanziamento Consumer Finance',`326,65 € il 10 di ogni mese, 3.920 € negli ultimi 12 mesi. Servono residuo, tasso e quante rate mancano: se il tasso è alto va chiuso prima, se è a zero si lascia stare.`],
+   ['f2','Separa il fondo tasse dal conto da cui escono le rate',`Oggi il finanziamento esce dallo stesso conto dove resta il 29 % per gli F24. Se quel conto si svuota non salta la rata: saltano le tasse.`],
+   ['f3','Dopo ogni bonifico SSI: trattieni il 29 % e non toccarlo',`Dovuti ${eur(dovuto)} per il 2026, sul conto ci sono ${eur(fondo)}. È la prima cosa da mettere via, prima di qualsiasi altra.`],
+   ['f4','Nei mesi pieni metti da parte per quelli vuoti','Le tue entrate vanno da 0 a 3.330 € al mese. Ottobre, novembre e dicembre sono i mesi buoni: è lì che si costruisce il cuscinetto per gennaio e agosto.'],
+   ['f5','I due portafoglini di famiglia: 90 € al mese','50 € Imprevisti + 40 € Natale e ferie, su Satispay. Stessa cifra di Roby.'],
+   ['f6','Mandami l\'estratto dettagliato della carta MPS','1.646 € in 12 mesi di cui conosco solo 250: senza il dettaglio non so quanto di quella carta è spesa di famiglia.'],
+   ['f7','Controlla se l\'inquilino ha pagato febbraio e marzo','Sull\'estratto Unicredit quei due mesi non risultano incassati.']];
+  const done=items.filter(i=>TODO[i[0]]).length;
+  return sec('todo','Cosa fare adesso',`${done} di ${items.length} fatte · in ordine di importanza`,items.map(i=>`<label class="todo ${TODO[i[0]]?'done':''}"><input type="checkbox" data-todo="${i[0]}" ${TODO[i[0]]?'checked':''}><div><div class="t">${i[1]}</div>${i[2]?`<div class="m">${i[2]}</div>`:''}</div></label>`).join(''),true);
+}
 function todoRoby(){
   const P=persCalc('roby'); const items=[
    ['t1','Porta sul CR Volterra i soldi fermi a 0 %',`Satispay ${eur(CONTI.sat.saldo||0)} + Revolut EUR 665 + liquidità Fineco 464 + Overnight Rate 601 = ~2.373 €: il fido scende subito, risparmi ~${eur(2373*.11)} l'anno`],
@@ -1309,6 +1325,16 @@ function avvisi(chi){
     const P=persCalc(chi), fidi=persFidi(chi);
     fidi.forEach(f=>{ if(f.noto&&f.v>0) A.push({l:f.v>6000?'rosso':'giallo',t:`${f.n}: fido usato per ${eur(f.v)}`,m:`Ti costa circa ${eur(f.v*f.tasso)} l'anno di soli interessi.`,go:'debiti'}) });
     if(P.free<0) A.push({l:'rosso',t:`Il tuo mese chiude a ${eur(P.free)}`,m:'Entrate meno spese, obiettivi e quota famiglia.',go:'home'});
+    if(chi==='franci'){
+      const fondo=(CONTI.mpsF&&CONTI.mpsF.saldo)||0, dovuto=taxOn(SSI.reduce((a,x)=>a+x.inc,0)).tot;
+      if(dovuto&&fondo<dovuto) A.push({l:fondo<dovuto*.5?'rosso':'giallo',t:`Fondo tasse: ${eur(fondo)} di ${eur(dovuto)}`,m:`Calcolati sui ${eur(SSI.reduce((a,x)=>a+x.inc,0))} incassati da SSI nel 2026. Mancano ${eur(dovuto-fondo)}.`,go:'tasse'});
+      const cf=FISSE.find(f=>f.id==='cfin');
+      if(cf) A.push({l:'giallo',t:'Il finanziamento esce dal conto delle tasse',m:`${eur(cf.imp)} il giorno ${cf.g} dal MPS Franci, lo stesso conto da cui escono gli F24.`,go:'debiti'});
+      A.push({l:'rosso',t:'Condominio: 1.408,46 € scaduti',m:'Sollecito del 16/9. Di questi 904,72 sono quote che doveva versare l\'inquilino, ma il condominio le chiede a voi: il proprietario risponde in solido.',go:'immobile'});
+      const cond=FISSE.find(f=>f.id==='immcond');
+      if(cond) A.push({l:GIORNO>cond.g?'giallo':'info',t:`Condominio: ${eur(cond.imp)} da mettere via questo mese`,m:`Appartamento · entro il ${cond.g} sul conto Unicredit.${GIORNO>cond.g?' Il giorno è passato: controlla se l\'hai fatto.':''}`,go:'immobile'});
+      A.push({l:'info',t:'Le tue entrate non sono uguali ogni mese',m:'Da 0 a 3.330 €. Ottobre, novembre e dicembre sono i mesi pieni: è lì che si mette via per gennaio e agosto.',go:'home'});
+    }
   }
   return A;
 }
@@ -1352,6 +1378,52 @@ function avanzamentoCard(){
   <h3>Già coperto a ${mese}</h3>${A.fatte.length?A.fatte.map(riga).join(''):'<div class="note">Ancora niente: il mese è appena iniziato.</div>'}
   <h3>Ancora da pagare questo mese</h3>${A.restano.length?A.restano.map(riga).join(''):'<div class="note">Niente di programmato nei giorni che restano.</div>'}
   <div class="note" style="margin-top:8px">${avanti?'Siete in linea col calendario del mese.':`Siete al ${Math.round(A.p*100)} % del fabbisogno con il ${Math.round(A.pTempo*100)} % del mese passato: normale se gli addebiti grossi cadono più avanti.`}</div>`;
+}
+
+// ---- Proiezioni di Franci: fondo tasse, stagionalità, finanziamento
+function proiezioniFranci(){
+  const inc=SSI.reduce((a,x)=>a+x.inc,0), t=taxOn(inc);
+  const tratt=inc-SSI.reduce((a,x)=>a+x.giro,0);
+  const manca=Math.max(0,t.tot-tratt);
+  const medio=SSI.length?inc/SSI.length:0, perBonifico=taxOn(medio).tot;
+  const restaAnno=12-SSI.length;
+  const annoPieno=medio*12, tAnno=taxOn(annoPieno);
+  const cf=FISSE.find(f=>f.id==='cfin'), rata=cf?cf.imp:0;
+  const st=(typeof STAG!=='undefined'&&STAG.franci)?STAG.franci:[];
+  const mesi=(typeof STAG!=='undefined'&&STAG.months)?STAG.months:[];
+  const medioMese=st.length?st.reduce((a,b)=>a+b,0)/st.length:0;
+  const vuoti=st.map((v,i)=>({v,m:mesi[i]})).filter(x=>x.v<medioMese*.5);
+  const pieni=st.map((v,i)=>({v,m:mesi[i]})).filter(x=>x.v>medioMese*1.3);
+  const buco=vuoti.reduce((a,x)=>a+(medioMese-x.v),0);
+  // fondo tasse nei prossimi 12 mesi: col 29 % trattenuto, e senza
+  const conRegola=[], senza=[];
+  let a=tratt, b=tratt;
+  for(let m=1;m<=12;m++){ a+=perBonifico; b+=tratt/Math.max(1,SSI.length); conRegola.push(Math.round(a)); senza.push(Math.round(b)) }
+  const etich=Array.from({length:12},(_,i)=>monthNames[(+MESE.slice(5)-1+i)%12]);
+  return sec('proiez','Proiezioni · fondo tasse e stagionalità','dove vanno a finire i tuoi numeri', `
+  <h3>Il fondo tasse, da dove esce ${eur(t.tot)}</h3>
+  <div class="row"><div><div class="t">Incassato da SSI nel 2026</div><div class="m">${SSI.length} bonifici, da ${monthNames[1]} a ${monthNames[8]}</div></div><div class="a">${eur(inc)}</div></div>
+  <div class="row"><div><div class="t">Reddito imponibile</div><div class="m">× 78 % (coefficiente consulenza)</div></div><div class="a">${eur(t.imp)}</div></div>
+  <div class="row"><div><div class="t">INPS Gestione Separata</div><div class="m">26,07 % dell'imponibile</div></div><div class="a">${eur(t.inps)}</div></div>
+  <div class="row"><div><div class="t">Imposta sostitutiva</div><div class="m">15 % su imponibile meno INPS</div></div><div class="a">${eur(t.tax)}</div></div>
+  <div class="row"><div><div class="t"><b>Totale da mettere da parte</b></div><div class="m">= ${pct(t.rate)} di ogni bonifico</div></div><div class="a"><b>${eur(t.tot)}</b></div></div>
+  <div class="row"><div><div class="t">Trattenuto finora</div><div class="m">${pct(inc?tratt/inc:0)} invece del ${pct(t.rate)}</div></div><div class="a" style="color:var(--bad)">${eur(tratt)}</div></div>
+  <div class="note warn" style="margin:8px 0">Mancano <b>${eur(manca)}</b>. E attenzione: questo è il conto sui <b>soli ${SSI.length} mesi già incassati</b>. Se gli ultimi ${restaAnno} mesi vanno come la media (${eur(medio)} a bonifico), l'anno pieno fa ${eur(annoPieno)} e il dovuto sale a <b>${eur(tAnno.tot)}</b>.</div>
+  <div class="note" style="margin-bottom:10px">Due cose da sapere: l'INPS al 26,07 % vale se non hai altra copertura previdenziale, altrimenti scende a ~24 % e il totale a ~27 %. E questo è l'<b>accantonamento</b>, non la dichiarazione: gli F24 veri li calcola Laura sull'anno intero con saldo e acconti.</div>
+  <h3>Il fondo nei prossimi 12 mesi</h3>
+  ${lineChart([{v:senza,color:'var(--bad)',dash:true},{v:conRegola,color:'var(--em)'}],etich)}
+  <div class="leg"><span><i style="background:var(--em)"></i>trattenendo il ${pct(t.rate)}</span><span><i style="background:var(--bad)"></i>come stai facendo ora</span></div>
+  <div class="hint" style="margin-top:6px">Su ogni bonifico da ${eur(medio)} vanno lasciati <b>${eur(perBonifico)}</b> sul conto, e girati a Roby ${eur(medio-perBonifico)}.</div>
+  <h3>I tuoi mesi non sono uguali</h3>
+  <div class="note" style="margin-bottom:8px">Entrate tue (senza SSI): media ${eur(medioMese)} al mese, ma ${pieni.length?pieni.map(x=>monthNames[+x.m.slice(5)-1]+' '+eur(x.v)).join(', '):'—'} sono i mesi pieni e ${vuoti.length?vuoti.map(x=>monthNames[+x.m.slice(5)-1]).join(', '):'—'} quelli quasi a zero.</div>
+  <div class="row"><div><div class="t">Quanto manca nei mesi vuoti</div><div class="m">rispetto alla tua media</div></div><div class="a">${eur(buco)}</div></div>
+  <div class="row"><div><div class="t">Da mettere via nei mesi pieni</div><div class="m">${pieni.length} mesi buoni · ${eur(pieni.length?buco/pieni.length:0)} ciascuno</div></div><div class="a">${eur(buco)}</div></div>
+  <div class="hint" style="margin-top:6px">Ottobre, novembre e dicembre sono i tuoi mesi buoni: è lì che si costruisce il cuscinetto per gennaio e agosto, non quando il buco è già arrivato.</div>
+  ${rata?`<h3>Il finanziamento</h3>
+  <div class="row"><div><div class="t">Rata Consumer Finance</div><div class="m">il ${cf.g} di ogni mese, dallo stesso conto delle tasse</div></div><div class="a">${eur(rata)}</div></div>
+  <div class="row"><div><div class="t">In 12 mesi</div><div class="m">quanto toglie al fondo tasse</div></div><div class="a">${eur(rata*12)}</div></div>
+  <div class="note" style="margin-top:6px">Senza il contratto non posso dirti se conviene chiuderlo: serve il tasso. Se è a tasso zero si lascia correre; se paga interessi, con ${eur(rata)} al mese liberi si chiude prima qualcos'altro.</div>`:''}
+  `, true);
 }
 // ---- PIN
 async function openPin(who,attivazione){
@@ -1473,9 +1545,9 @@ function homePers(){
     <div class="steps3">${steps.map((s,i)=>`<button class="st ${P.liv===i+1?'on':''}" data-pliv="${i+1}"><span>${i+1} · ${s[0]}</span><b>${eur(s[2])}</b><small>${s[1]}</small></button>`).join('')}</div>
     ${ign.length?ign.map(x=>`<div class="row" style="border:0;padding:6px 0 0"><div class="m">Saldo ${x.n} da inserire</div><div class="a"><input class="inp n" style="width:90px" type="number" data-sv="${x.k}" placeholder="es. -3500"> <button class="btn sm" data-ss="${x.k}">ok</button></div></div>`).join(''):''}
   </div>
-  ${_AV.length?sec('avvisip','Da guardare adesso',(_AV.filter(x=>x.l==='rosso').length?_AV.filter(x=>x.l==='rosso').length+' urgenti · ':'')+_AV.length+' avvisi',avvisiCard(_AV),true):''}
+  ${sec('avvisip','Da guardare adesso',_AV.length?((_AV.filter(x=>x.l==='rosso').length?_AV.filter(x=>x.l==='rosso').length+' urgenti · ':'')+_AV.length+' avvisi'):'tutto in ordine',avvisiCard(_AV),true)}
   <div class="actions">${act('c1','id="fab2"','mov','＋ Movimento')}${act('c3',`data-val="${me}"`,'valuta','Valuta')}${act('c4','data-imp="1"','importa','Importa')}${act('c2','data-sub="piano"','piano','Il mio piano')}</div>
-  ${me==='roby'?todoRoby()+vendereRoby():''}
+  ${me==='roby'?todoRoby():todoFranci()+proiezioniFranci()}
   ${me==='franci'?stagFranci():''}
   <details class="sec cfo-sec" data-secx="pcfo" ${OPEN.pcfo==null||OPEN.pcfo?'open':''}><summary><div><b>Direttore finanziario · ${nome}</b><span>se il gioco vale la candela</span></div><span class="cfo-badge">● aggiornato</span></summary><div class="secb">${cfoCard(cfo(me))}</div></details>
   ${me==='roby'?proiezioniRoby():''}
