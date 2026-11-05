@@ -2263,7 +2263,7 @@ function render(){
   const _pg=(state.sub||state.tab)+':'+state.profile, _same=render._last===_pg, _y=window.scrollY; render._last=_pg;
   if(state.profile!=='famiglia'&&state.auth!==state.profile)state.profile='famiglia';
   $('#profile').hidden=false;$('#hdrLogout').hidden=!(state.auth||(online&&ME));document.querySelector('nav.tabs').hidden=false;
-  document.querySelectorAll('#profile button').forEach(b=>{b.hidden=!!state.auth&&b.dataset.p!=='famiglia'&&b.dataset.p!==state.auth;b.classList.toggle('on',b.dataset.p===state.profile)});
+  const _io=state.auth||(online&&ME&&ME.id)||null;document.querySelectorAll('#profile button').forEach(b=>{b.hidden=!!_io&&b.dataset.p!=='famiglia'&&b.dataset.p!==_io;b.classList.toggle('on',b.dataset.p===state.profile)});
   badge();
   const bk=$('#hdrBack'); if(bk)bk.hidden=!(state.sub||HIST.length);
   const p=state.sub||state.tab;
